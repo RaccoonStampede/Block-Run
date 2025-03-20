@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Retro Motorcycle Game (Mobile)</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #000;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            border: 2px solid #fff;
+            image-rendering: pixelated;
+            background-color: #87CEEB;
+            width: 100%;
+            height: auto;
+            max-width: 800px;
+        }
+
+        @media (orientation: landscape) {
+            #gameCanvas {
+                height: 100vh;
+                width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight * 0.8;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const bikeWidth = 40;
+        const bikeHeight = 20;
+        const bikeSpeed = 5;
+        const gravity = 0.5;
+        const jumpPower = -10;
+        const ceilingHeight = 20;
+        const groundHeight = 20;
+
+        let bikeX = 50;
+        let bikeY = canvas.height - bikeHeight - groundHeight;
+        let bikeVelocityY = 0;
+        let isJumping = false;
+        let groundBlocks = [];
+        let ceilingBlocks = [];
+        let score = 0;
+        let gameSpeed = 3;
+        let groundTime = 0;
+        let bonusMultiplier = 2;
+
+        const bike = {
+            draw: function() {
+                ctx.fillStyle = 'red';
+                ctx.fillRect(bikeX, bikeY, bikeWidth, bikeHeight);
+                ctx.fillStyle = 'black';
+                ctx.fillRect(bikeX + 10, bikeY + 5, 5, 5);
+                ctx.fillRect(bikeX + 25, bikeY + 5, 5, 5);
+            }
+        };
+
+        class GroundBlock {
+            constructor() {
+                this.width = 30;
+                this.height = Math.random() * (canvas.height/3 - groundHeight - 30) + 30;
+                this.x = canvas.width;
+                this.y = canvas.height - groundHeight - this.height;
+            }
+
+            draw() {
+                ctx.fillStyle = 'green';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            update() {
+                this.x -= gameSpeed;
+            }
+        }
+
+        class CeilingBlock {
+            constructor() {
+                this.width = 30;
+                this.height = Math.random() * (canvas.height/3 - ceilingHeight - 30) + 30;
+                this.x = canvas.width;
+                this.y = ceilingHeight;
+            }
+
+            draw() {
+                ctx.fillStyle = 'purple';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            update() {
+                this.x -= gameSpeed;
+            }
+        }
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!isJumping) {
+                bikeVelocityY = jumpPower;
+                isJumping = true;
+                bonusMultiplier = 2;
+                groundTime = 0;
+            }
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isJumping = false;
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' && !isJumping) {
+                bikeVelocityY = jumpPower;
+                isJumping = true;
+                bonusMultiplier = 2;
+                groundTime = 0;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === ' ') {
+                isJumping = false;
+            }
+        });
+
+        function canSpawnBlock(lastBlock) {
+            const minGap = 100;
+            return !lastBlock || (canvas.width - lastBlock.x > minGap);
+        }
+
+        function spawnObstacles() {
+            const spawnChance = 0.02;
+            const lastCeiling = ceilingBlocks[ceilingBlocks.length - 1];
+            const lastGround = groundBlocks[groundBlocks.length - 1];
+
+            if (Math.random() < spawnChance && canSpawnBlock(lastCeiling)) {
+                ceilingBlocks.push(new CeilingBlock());
+            }
+            if (Math.random() < spawnChance && canSpawnBlock(lastGround)) {
+                groundBlocks.push(new GroundBlock());
+            }
+        }
+
+        function checkCollision() {
+            const allBlocks = [...groundBlocks, ...ceilingBlocks];
+            for (let i = 0; i < allBlocks.length; i++) {
+                if (
+                    bikeX < allBlocks[i].x + allBlocks[i].width &&
+                    bikeX + bikeWidth > allBlocks[i].x &&
+                    bikeY < allBlocks[i].y + allBlocks[i].height &&
+                    bikeY + bikeHeight > allBlocks[i].y
+                ) {
+                    alert('Game Over! Score: ' + score);
+                    document.location.reload();
+                }
+            }
+            if (bikeY < ceilingHeight) {
+                bikeY = ceilingHeight;
+                bikeVelocityY = 0;
+            }
+            if (bikeY > canvas.height - bikeHeight - groundHeight) {
+                bikeY = canvas.height - bikeHeight - groundHeight;
+                bikeVelocityY = 0;
+                isJumping = false;
+            }
+        }
+
+        function isOnBottomGround() {
+            // Check if bike is exactly on the bottom ground surface
+            return bikeY === canvas.height - bikeHeight - groundHeight;
+        }
+
+        function update() {
+            bikeVelocityY += gravity;
+            bikeY += bikeVelocityY;
+
+            if (bikeY > canvas.height - bikeHeight - groundHeight) {
+                bikeY = canvas.height - bikeHeight - groundHeight;
+                bikeVelocityY = 0;
+                isJumping = false;
+            }
+
+            groundBlocks.forEach(block => block.update());
+            ceilingBlocks.forEach(block => block.update());
+
+            groundBlocks = groundBlocks.filter(block => block.x + block.width > 0);
+            ceilingBlocks = ceilingBlocks.filter(block => block.x + block.width > 0);
+
+            spawnObstacles();
+            checkCollision();
+
+            // Update ground time and multiplier only when on bottom ground
+            if (isOnBottomGround()) {
+                groundTime++;
+                bonusMultiplier = Math.floor(groundTime / 60) + 2;
+                score += bonusMultiplier;
+            } else {
+                groundTime = 0;  // Reset ground time when not on bottom ground
+                bonusMultiplier = 2;  // Reset multiplier when not on bottom ground
+            }
+
+            if (score % 1000 === 0 && score > 0) {
+                gameSpeed += 0.5;
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#4B0082';
+            ctx.fillRect(0, 0, canvas.width, ceilingHeight);
+
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
+
+            bike.draw();
+            groundBlocks.forEach(block => block.draw());
+            ceilingBlocks.forEach(block => block.draw());
+
+            ctx.fillStyle = 'white';
+            ctx.font = '20px Arial';
+            ctx.fillText('Score: ' + Math.floor(score), 10, 30);
+            ctx.fillText('Multiplier: x' + bonusMultiplier, 10, 60);
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
