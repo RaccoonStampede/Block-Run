@@ -59,7 +59,7 @@
         let isJumping = false;
         let groundBlocks = [];
         let ceilingBlocks = [];
-        let score = 0;
+        let score = 0; // Now supports decimals
         let gameSpeed = 3; // Pixels per frame at 60 FPS
         let groundTime = 0;
         let bonusMultiplier = 2;
@@ -226,7 +226,7 @@
                     bikeY + bikeHeight > allBlocks[i].y
                 ) {
                     paused = true;
-                    const choice = confirm(`Game Over! Score: ${Math.floor(score)}\nRestart? (OK) or Quit (Cancel)`);
+                    const choice = confirm(`Game Over! Score: ${score.toFixed(2)}\nRestart? (OK) or Quit (Cancel)`);
                     if (choice) {
                         resetGame();
                     } else {
@@ -272,6 +272,7 @@
             spawnObstacles();
             checkCollision();
 
+            // Scoring logic
             if (isOnBottomGround()) {
                 groundTime++;
                 bonusMultiplier = Math.floor(groundTime / TARGET_FPS) + 2;
@@ -279,6 +280,7 @@
             } else {
                 groundTime = 0;
                 bonusMultiplier = 2;
+                score += 0.10; // Add 0.10 points per frame in the air
             }
 
             if (score % 1000 === 0 && score > 0) {
@@ -302,9 +304,9 @@
 
             ctx.fillStyle = 'white';
             ctx.font = '20px Arial';
-            ctx.fillText('Score: ' + Math.floor(score), 10, 30);
+            ctx.fillText('Score: ' + score.toFixed(2), 10, 30); // Show 2 decimal places
             ctx.fillText('Multiplier: x' + bonusMultiplier, 10, 60);
-            ctx.fillText('FPS: ' + fps, 10, 90); // Display FPS
+            ctx.fillText('FPS: ' + fps, 10, 90);
 
             pauseButton.draw();
 
