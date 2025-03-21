@@ -64,6 +64,7 @@
         let groundTime = 0;
         let bonusMultiplier = 2;
         let paused = false;
+        let nextSpeedIncrease = 1000; // Threshold for next speed increase
 
         // FPS counter for debugging
         let frameCount = 0;
@@ -214,6 +215,7 @@
             groundTime = 0;
             bonusMultiplier = 2;
             paused = false;
+            nextSpeedIncrease = 1000; // Reset speed increase threshold
         }
 
         function checkCollision() {
@@ -283,8 +285,10 @@
                 score += 0.10; // Add 0.10 points per frame in the air
             }
 
-            if (score % 1000 === 0 && score > 0) {
+            // Speed increase logic
+            if (score >= nextSpeedIncrease) {
                 gameSpeed += 0.5;
+                nextSpeedIncrease += 1000;
             }
         }
 
@@ -304,7 +308,7 @@
 
             ctx.fillStyle = 'white';
             ctx.font = '20px Arial';
-            ctx.fillText('Score: ' + score.toFixed(2), 10, 30); // Show 2 decimal places
+            ctx.fillText('Score: ' + score.toFixed(2), 10, 30);
             ctx.fillText('Multiplier: x' + bonusMultiplier, 10, 60);
             ctx.fillText('FPS: ' + fps, 10, 90);
 
