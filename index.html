@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Block Run (Mobile)</title>
+    <title>Retro Motorcycle Game (Mobile)</title>
     <style>
         body {
             margin: 0;
@@ -66,6 +66,30 @@
         let bonusMultiplier = 2;
         let paused = false;
 
+        const pauseButton = {
+            x: canvas.width - 40, // 20px from right edge + 20px radius
+            y: 40, // 20px from top + 20px radius
+            radius: 20,
+            draw: function() {
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'black';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(paused ? '▶' : '||', this.x, this.y);
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'alphabetic';
+            },
+            contains: function(x, y) {
+                const dx = x - this.x;
+                const dy = y - this.y;
+                return Math.sqrt(dx * dx + dy * dy) <= this.radius;
+            }
+        };
+
         const bike = {
             draw: function() {
                 ctx.fillStyle = 'red';
@@ -113,15 +137,24 @@
         }
 
         // Input handlers
-        canvas.addEventListener('touchstart', (e) => {
+        function handleTouchOrClick(e) {
             e.preventDefault();
-            if (!isJumping && !paused) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.type === 'touchstart' ? e.touches[0].clientX : e.clientX) - rect.left;
+            const y = (e.type === 'touchstart' ? e.touches[0].clientY : e.clientY) - rect.top;
+
+            if (pauseButton.contains(x, y)) {
+                paused = !paused;
+            } else if (!isJumping && !paused) {
                 bikeVelocityY = jumpPower;
                 isJumping = true;
                 bonusMultiplier = 2;
                 groundTime = 0;
             }
-        });
+        }
+
+        canvas.addEventListener('touchstart', handleTouchOrClick);
+        canvas.addEventListener('click', handleTouchOrClick);
 
         canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
@@ -144,19 +177,6 @@
                 isJumping = false;
             }
         });
-
-        // Accelerometer for pause on mobile
-        if (window.DeviceOrientationEvent) {
-            window.addEventListener('deviceorientation', (e) => {
-                const tiltX = e.beta; // Front-to-back tilt (not used here)
-                const tiltY = e.gamma; // Left-to-right tilt
-                if (tiltY < -30 && !paused) { // Tilt left beyond -30 degrees to pause
-                    paused = true;
-                } else if (tiltY > 30 && paused) { // Tilt right beyond 30 degrees to resume
-                    paused = false;
-                }
-            });
-        }
 
         function canSpawnBlock(lastBlock) {
             const minGap = 100;
@@ -279,6 +299,8 @@
             ctx.fillText('Score: ' + Math.floor(score), 10, 30);
             ctx.fillText('Multiplier: x' + bonusMultiplier, 10, 60);
 
+            pauseButton.draw(); // Draw the pause button
+
             if (paused) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -287,7 +309,7 @@
                 ctx.textAlign = 'center';
                 ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
                 ctx.font = '20px Arial';
-                ctx.fillText('Tilt right or press P to resume', canvas.width / 2, canvas.height / 2 + 40);
+                ctx.fillText('Tap the button or press P to resume', canvas.width / 2, canvas.height / 2 + 40);
                 ctx.textAlign = 'left';
             }
         }
